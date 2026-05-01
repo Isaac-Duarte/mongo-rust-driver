@@ -1,5 +1,6 @@
 #[cfg(feature = "dns-resolver")]
 use hickory_resolver::config::ResolverConfig as HickoryResolverConfig;
+use hickory_resolver::config::{CLOUDFLARE, GOOGLE, QUAD9};
 
 /// Configuration for the upstream nameservers to use for resolution.
 ///
@@ -25,14 +26,20 @@ impl PartialEq for ResolverConfig {
         }
 
         for (a, b) in std::iter::zip(left.name_servers(), right.name_servers()) {
-            if !(a.socket_addr == b.socket_addr
-                && a.protocol == b.protocol
-                && a.tls_dns_name == b.tls_dns_name
-                && a.http_endpoint == b.http_endpoint
+            if !(a.ip == b.ip
                 && a.trust_negative_responses == b.trust_negative_responses
-                && a.bind_addr == b.bind_addr)
+                && a.connections.len() == b.connections.len())
             {
                 return false;
+            }
+
+            for (a_connection, b_connection) in std::iter::zip(&a.connections, &b.connections) {
+                if !(a_connection.port == b_connection.port
+                    && a_connection.protocol == b_connection.protocol
+                    && a_connection.bind_addr == b_connection.bind_addr)
+                {
+                    return false;
+                }
             }
         }
 
@@ -48,7 +55,7 @@ impl ResolverConfig {
     /// Please see: <https://www.cloudflare.com/dns/>
     pub fn cloudflare() -> Self {
         ResolverConfig {
-            inner: HickoryResolverConfig::cloudflare(),
+            inner: HickoryResolverConfig::udp_and_tcp(&CLOUDFLARE),
         }
     }
 
@@ -59,7 +66,7 @@ impl ResolverConfig {
     /// ISP’s track similar information in DNS.
     pub fn google() -> Self {
         ResolverConfig {
-            inner: HickoryResolverConfig::google(),
+            inner: HickoryResolverConfig::udp_and_tcp(&GOOGLE),
         }
     }
 
@@ -69,7 +76,7 @@ impl ResolverConfig {
     /// Please see: <https://www.quad9.net/faq/>
     pub fn quad9() -> Self {
         ResolverConfig {
-            inner: HickoryResolverConfig::quad9(),
+            inner: HickoryResolverConfig::udp_and_tcp(&QUAD9),
         }
     }
 }
